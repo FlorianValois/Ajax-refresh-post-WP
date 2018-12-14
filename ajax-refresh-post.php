@@ -18,8 +18,6 @@ if (!defined('ABSPATH')) {
 //if ( !function_exists( 'arp_init' ) ) {
 //	register_activation_hook( __FILE__, 'arp_init' );
 //  function arp_init() {
-//
-//		
 //  }
 //}
 
@@ -28,8 +26,9 @@ if ( !function_exists( 'arp_init' ) ) {
   function arp_init() {
 		
 		/* PLUGIN */
-		wp_enqueue_script('script-arp', plugins_url('script.js', __FILE__), false, '', true);
-//		wp_enqueue_style('wpk-admin-css', plugins_url('/style.min.css', dirname(__FILE__)));											 
+		wp_enqueue_script('script-arp', plugins_url('script.min.js', __FILE__), false, '', true);
+		wp_enqueue_style('admin-css', plugins_url('style.min.css', __FILE__));
+		
 		wp_localize_script( 'script-arp', 'arpAjax', array(
 				'ajaxurl' => admin_url( 'admin-ajax.php' )
 				)
@@ -56,20 +55,84 @@ if ( !function_exists( 'arp_post_shortcode' ) ) {
 		}
 ?>
 </select>
-<div id='arp_post'></div>
+<div id='arp_post'>
+<?php
+		
+	$nbPostPublish = intval(wp_count_posts( 'post' )->publish);
+	$nbPostPerPage = get_option('posts_per_page');
+		
+	$nbPagePagination = intval(ceil($nbPostPublish / $nbPostPerPage));
+		
+	$args = array(
+			'post_type' => 'post',
+			'paged' => get_query_var('paged')
+	);
+	$query = new WP_Query($args);
+	?>
+	<ul>
+	<?php
+		if( $query -> have_posts() ): while( $query -> have_posts() ) : $query -> the_post();
+	?>
+		<li>
+			<a href="<?php echo get_permalink(); ?>">
+				<?php echo the_post_thumbnail('thumbnail'); ?>
+				<div><span><?php echo the_title(); ?></span></div>
+			</a>
+		</li>
+	<?php
+		endwhile;
+		endif;
+	?>
+	</ul>
+	<nav id="navPaginationAjax">
+			<ul>
+			<?php
+			$i = 0;
+			while($i < $nbPagePagination){
+			$i++;
+			?>
+			<li>
+					<button type="button" class="number"><?php echo $i; ?></button>
+			</li>
+			<?php
+			}
+			?>
+			</ul>
+		</nav>
+	<?php
+		wp_reset_query();
+?>
+
+</div>
 <?php
 	}
 }
 
-add_action( 'wp_ajax_' . 'updatePostAjax', 'updatePostAjax_function' );
-add_action( 'wp_ajax_nopriv_' . 'updatePostAjax', 'updatePostAjax_function' );
-if ( !function_exists( 'updatePostAjax_function' ) ) {
-	function updatePostAjax_function(){
-		
-		global $wpdb;
-		
+add_action( 'wp_ajax_' . 'chooseCategoryPostAjax', 'chooseCategoryPostAjax_function' );
+add_action( 'wp_ajax_nopriv_' . 'chooseCategoryPostAjax', 'chooseCategoryPostAjax_function' );
+if ( !function_exists( 'chooseCategoryPostAjax_function' ) ) {
+	function chooseCategoryPostAjax_function(){
+				
 		$category = $_POST['data'];
 		
+		$allCategories = get_categories();
+				
+		foreach($allCategories as $key){
+			if($key->slug === $category){
+				$countPostCategory = $key->count;
+			}
+		}
+		
+		if($category != 'all'){
+			$nbPostPublish = $countPostCategory;
+		}else{
+			$nbPostPublish = wp_count_posts('post')->publish;
+		}
+		
+		$nbPostPerPage = get_option('posts_per_page');
+
+		$nbPagePagination = intval(ceil($nbPostPublish / $nbPostPerPage));
+						
 		if($category != 'all'){
 			$args = array(
 					'post_type' => 'post',
@@ -83,30 +146,52 @@ if ( !function_exists( 'updatePostAjax_function' ) ) {
 			);
 		}
 		
-//		var_dump($args);
-		
 		$query = new WP_Query($args);
 		?>
+	
 		<ul>
 		<?php
 		if( $query -> have_posts() ): while( $query -> have_posts() ) : $query -> the_post();
     ?>
-
-		<li>
-				<a href="<?php echo get_permalink(); ?>">
-						<?php echo the_post_thumbnail('thumbnail'); ?>
-						<div><span><?php echo the_title(); ?></span></div>
-				</a>
-		</li>
-
+			<li>
+					<a href="<?php echo get_permalink(); ?>">
+							<?php echo the_post_thumbnail('thumbnail'); ?>
+							<div><span><?php echo the_title(); ?></span></div>
+					</a>
+			</li>
     <?php
 		endwhile;
 		endif;
 		?>
 		</ul>
+		
+		<nav id="navPaginationAjax">
+			<ul>
+			<?php
+			$i = 0;
+			while($i < $nbPagePagination){
+			$i++;
+			?>
+			<li>
+					<button type="button" class="number"><?php echo $i; ?></button>
+			</li>
+			<?php
+			}
+			?>
+			</ul>
+		</nav>
 		<?php
 		wp_reset_query();
 		
 		die();
+	}
+}
+
+add_action( 'wp_ajax_' . 'paginationPostAjax', 'paginationPostAjax_function' );
+add_action( 'wp_ajax_nopriv_' . 'paginationPostAjax', 'paginationPostAjax_function' );
+if ( !function_exists( 'paginationPostAjax_function' ) ) {
+	function paginationPostAjax_function(){
+		var_dump($_POST['data']);
+		die();		
 	}
 }
