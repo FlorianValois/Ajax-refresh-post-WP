@@ -71,9 +71,11 @@ if ( !function_exists( 'arp_post_shortcode' ) ) {
 	?>
 	<ul>
 	<?php
+		$p = 0;
 		if( $query -> have_posts() ): while( $query -> have_posts() ) : $query -> the_post();
-	?>
-		<li>
+		$p++;
+    ?>
+			<li data-page="<?php echo $p; ?>">
 			<a href="<?php echo get_permalink(); ?>">
 				<?php echo the_post_thumbnail('thumbnail'); ?>
 				<div><span><?php echo the_title(); ?></span></div>
@@ -84,6 +86,7 @@ if ( !function_exists( 'arp_post_shortcode' ) ) {
 		endif;
 	?>
 	</ul>
+
 	<nav id="navPaginationAjax">
 			<ul>
 			<?php
@@ -92,18 +95,18 @@ if ( !function_exists( 'arp_post_shortcode' ) ) {
 			$i++;
 			?>
 			<li>
-					<button type="button" class="number"><?php echo $i; ?></button>
+					<button type="button" class="number" data-page="<?php echo $i; ?>"><?php echo $i; ?></button>
 			</li>
 			<?php
 			}
 			?>
 			</ul>
-		</nav>
+	</nav>
 	<?php
 		wp_reset_query();
 ?>
-
 </div>
+
 <?php
 	}
 }
@@ -151,9 +154,11 @@ if ( !function_exists( 'chooseCategoryPostAjax_function' ) ) {
 	
 		<ul>
 		<?php
+		$p = 0;
 		if( $query -> have_posts() ): while( $query -> have_posts() ) : $query -> the_post();
+		$p++;
     ?>
-			<li>
+			<li data-page="<?php echo $p; ?>">
 					<a href="<?php echo get_permalink(); ?>">
 							<?php echo the_post_thumbnail('thumbnail'); ?>
 							<div><span><?php echo the_title(); ?></span></div>
@@ -173,7 +178,7 @@ if ( !function_exists( 'chooseCategoryPostAjax_function' ) ) {
 			$i++;
 			?>
 			<li>
-					<button type="button" class="number"><?php echo $i; ?></button>
+					<button type="button" class="number" data-page="<?php echo $i; ?>"><?php echo $i; ?></button>
 			</li>
 			<?php
 			}
@@ -191,7 +196,115 @@ add_action( 'wp_ajax_' . 'paginationPostAjax', 'paginationPostAjax_function' );
 add_action( 'wp_ajax_nopriv_' . 'paginationPostAjax', 'paginationPostAjax_function' );
 if ( !function_exists( 'paginationPostAjax_function' ) ) {
 	function paginationPostAjax_function(){
-		var_dump($_POST['data']);
+				
+		$allCategories = get_categories();
+		
+		$catSelect = $_POST['data']['catSelect'];
+						
+		foreach($allCategories as $key){
+			if($key->slug === $catSelect){
+				$countPostCategory = $key->count;
+			}
+		}
+		
+		if($catSelect != 'all'){
+			$nbPostPublish = $countPostCategory;
+		}else{
+			$nbPostPublish = wp_count_posts('post')->publish;
+		}
+		
+		$nbPostPerPage = get_option('posts_per_page');
+
+		$nbPagePagination = intval(ceil($nbPostPublish / $nbPostPerPage));
+				
+		
+		if($catSelect != 'all'){
+			$args = array(
+					'post_type' => 'post',
+					'paged' => $_POST['data']['number'],
+					'category_name' => $catSelect
+			);
+		} else{
+			$args = array(
+					'post_type' => 'post',
+					'paged' => $_POST['data']['number']
+			);
+		}
+		
+		$query = new WP_Query($args);
+		?>
+	
+		<ul>
+		<?php
+		$p = 0;
+		if( $query -> have_posts() ): while( $query -> have_posts() ) : $query -> the_post();
+		$p++;
+    ?>
+			<li data-page="<?php echo $p; ?>">
+					<a href="<?php echo get_permalink(); ?>">
+							<?php echo the_post_thumbnail('thumbnail'); ?>
+							<div><span><?php echo the_title(); ?></span></div>
+					</a>
+			</li>
+    <?php
+		endwhile;
+		endif;
+		?>
+		</ul>
+		
+		<nav id="navPaginationAjax">
+			<ul>
+			<?php
+			$i = 0;
+			while($i < $nbPagePagination){
+			$i++;
+			?>
+			<li>
+					<button type="button" class="number" data-page="<?php echo $i; ?>"><?php echo $i; ?></button>
+			</li>
+			<?php
+			}
+			?>
+			</ul>
+		</nav>
+		<?php
+		wp_reset_query();		
+		
 		die();		
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
